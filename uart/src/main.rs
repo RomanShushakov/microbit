@@ -1,10 +1,11 @@
 #![no_main]
 #![no_std]
 
+use core::fmt::Write;
+
 use cortex_m_rt::entry;
 use panic_rtt_target as _;
-use rtt_target::rtt_init_print;
-
+use rtt_target::{rtt_init_print, rprintln};
 use microbit::
 {
     hal::prelude::*,
@@ -26,7 +27,7 @@ fn main() -> !
     let mut serial = 
     {
         let serial = uarte::Uarte::new(
-            board.UARTE1,
+            board.UARTE0,
             board.uart.into(),
             Parity::EXCLUDED,
             Baudrate::BAUD115200,
@@ -34,8 +35,16 @@ fn main() -> !
         UartePort::new(serial)
     };
     
-    nb::block!(serial.write(b'X')).unwrap();
+    write!(serial, "Write text here:\n").unwrap();
     nb::block!(serial.flush()).unwrap();
 
-    loop {}
+    loop 
+    {
+        if let Ok(byte) = nb::block!(serial.read())
+        {
+            rprintln!("The char typed by client: {}", char::from(byte));
+            nb::block!(serial.write(byte)).unwrap();
+            nb::block!(serial.flush()).unwrap();
+        }
+    }
 }
