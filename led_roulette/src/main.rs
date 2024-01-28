@@ -10,13 +10,11 @@ use rtt_target::{rtt_init_print, rprintln};
 use panic_rtt_target as _;
 use microbit::
 {
-    board::Board, display::blocking::Display, hal::{Timer, prelude::InputPin},
+    board::Board, display::blocking::Display, hal::{Timer, prelude::InputPin}, gpio::{NUM_ROWS, NUM_COLS},
 };
 
 
-const SIZE: usize = 5;
-
-
+#[derive(Debug)]
 enum Edge
 {
     FirstFwd,
@@ -43,14 +41,14 @@ fn get_path(edge: &Edge) -> Path
 {
     match edge
     {
-        Edge::FirstFwd => Path::RowConstColFwd(0..1, 1..SIZE),
-        Edge::SecondFwd => Path::RowFwdColConst(1..SIZE, SIZE - 1..SIZE),
-        Edge::ThirdFwd => Path::RowConstColRev(SIZE - 1..SIZE, (0..SIZE - 1).rev()),
-        Edge::FourthFwd => Path::RowRevColConst((0..SIZE - 1).rev(), 0..1),
-        Edge::FirstRev => Path::RowConstColRev(0..1, (1..SIZE).rev()),
-        Edge::SecondRev => Path::RowRevColConst((1..SIZE).rev(), SIZE - 1..SIZE),
-        Edge::ThirdRev => Path::RowConstColFwd(SIZE - 1..SIZE, 0..SIZE - 1),
-        Edge::FourthRev => Path::RowFwdColConst(0..SIZE - 1, 0..1),
+        Edge::FirstFwd => Path::RowConstColFwd(0..1, 1..NUM_COLS),
+        Edge::SecondFwd => Path::RowFwdColConst(1..NUM_ROWS, NUM_COLS - 1..NUM_COLS),
+        Edge::ThirdFwd => Path::RowConstColRev(NUM_ROWS - 1..NUM_ROWS, (0..NUM_COLS - 1).rev()),
+        Edge::FourthFwd => Path::RowRevColConst((0..NUM_ROWS - 1).rev(), 0..1),
+        Edge::FirstRev => Path::RowConstColRev(0..1, (1..NUM_COLS).rev()),
+        Edge::SecondRev => Path::RowRevColConst((1..NUM_ROWS).rev(), NUM_COLS - 1..NUM_COLS),
+        Edge::ThirdRev => Path::RowConstColFwd(NUM_ROWS - 1..NUM_ROWS, 0..NUM_COLS - 1),
+        Edge::FourthRev => Path::RowFwdColConst(0..NUM_ROWS - 1, 0..1),
     }
 }
 
@@ -69,7 +67,7 @@ fn main() -> !
     let button_a = board.buttons.button_a;
     let button_b = board.buttons.button_b;
 
-    let mut lights = [[0; SIZE]; SIZE];
+    let mut lights = [[0; NUM_COLS]; NUM_ROWS];
 
     let mut edge = Edge::FirstFwd;
 
@@ -114,6 +112,7 @@ fn main() -> !
             if is_button_b_clicked
             {
                 edge = Edge::FirstFwd;
+                rprintln!("Edge and direction: {:?}", edge);
             }
         }
 
@@ -123,6 +122,7 @@ fn main() -> !
             if is_button_a_clicked
             {
                 edge = Edge::FirstRev;
+                rprintln!("Edge and direction: {:?}", edge);
             }
         }
     }
