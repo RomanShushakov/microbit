@@ -5,13 +5,14 @@ use core::fmt::Write;
 
 use cortex_m_rt::entry;
 use panic_rtt_target as _;
-use rtt_target::{rtt_init_print, rprintln};
+use rtt_target::rtt_init_print;
 use microbit::
 {
     hal::prelude::*,
     hal::uarte,
     hal::uarte::{Baudrate, Parity},
 };
+use heapless::Vec;
 
 
 mod serial_setup;
@@ -35,16 +36,30 @@ fn main() -> !
         UartePort::new(serial)
     };
     
-    write!(serial, "Write text here:\n").unwrap();
-    nb::block!(serial.flush()).unwrap();
+    let mut buffer: Vec<u8, 32> = Vec::new();
 
-    loop 
+    'outer: loop 
     {
-        if let Ok(byte) = nb::block!(serial.read())
+        buffer.clear();
+
+        'inner: loop
         {
-            rprintln!("The char typed by client: {}", char::from(byte));
-            nb::block!(serial.write(byte)).unwrap();
-            nb::block!(serial.flush()).unwrap();
+            // We assume that the receiving cannot fail
+            let byte = nb::block!(serial.read()).unwrap();
+            if buffer.push(byte).is_err() 
+            {
+                write!(serial, "error: buffer full\r\n").unwrap();
+                break 'inner;
+            }
+
+            if byte == 13 {
+                for byte in buffer.iter().rev().chain(&[b'\n', b'\r']) 
+                {
+                    nb::block!(serial.write(*byte)).unwrap();
+                }
+                break 'inner;
+            } 
         }
+        nb::block!(serial.flush()).unwrap()
     }
 }
