@@ -7,14 +7,74 @@ use rtt_target::{rtt_init_print, rprintln};
 use panic_rtt_target as _;
 use microbit::
 {
-    board::Board, display::blocking::Display, hal::{Timer, prelude::*},
+    board::Board, display::blocking::Display, hal::{prelude::*, timer::{Instance, Periodic}, Timer},
 };
 
-mod round;
-use round::Round;
+mod number;
+use number::Number;
 
 mod buttons;
 use buttons::{Pressed, init_buttons, get_pressed};
+
+
+const ROUND_DURATION: u32 = 180_000_000;    // 3 min in microseconds
+const REST_DURATION: u32 = 60_000_000;      // 1 min in microseconds
+const WHISTLE: u32 = 10_000_000;            // 10 secs in microseconds
+
+
+#[derive(PartialEq, Eq)]
+enum State
+{
+    WarmingUp,
+    Round,
+    RoundWhistle,
+    Rest,
+    RestWhistle,
+    Stop,
+}
+
+
+fn reset(round: &mut Number, sec: &mut Number, state: &mut State, is_timer_running: &mut bool, whistle: &mut u32)
+{
+    *round = Number::Zero;
+    *sec = Number::Zero;
+    *state = State::Stop;
+    *is_timer_running = false;
+    *whistle = WHISTLE;
+}
+
+
+fn run_countdown<T>(
+    is_timer_running: &mut bool,
+    timer: &mut Timer<T, Periodic>,
+    ticks_per_second: u32,
+    sec: &mut Number,
+    whistle: &mut u32,
+)
+    where T: Instance
+{
+    if !*is_timer_running
+    {
+        rprintln!("Start timer");
+        timer.start(ticks_per_second);
+        *is_timer_running = true;
+    }
+    else
+    {
+        if let Ok(_) = timer.wait()
+        {
+            sec.previous();
+            *whistle -= ticks_per_second;
+            rprintln!("Running timer: {}", whistle);
+            if *whistle == 0
+            {
+                rprintln!("Stop timer");
+                *is_timer_running = false;
+                *whistle = WHISTLE;
+            }
+        }
+    }
+}
 
 
 #[entry]
@@ -23,72 +83,109 @@ fn main() -> !
     rtt_init_print!();
 
     let board = Board::take().unwrap();
-
-    let mut timer = Timer::new(board.TIMER0);
-
+    let mut timer = Timer::new(board.TIMER0).into_periodic();
+    let mut timer_1 = Timer::new(board.TIMER1);
     let mut display = Display::new(board.display_pins);
-
     let speaker = board.speaker_pin;
 
     init_buttons(board.GPIOTE, board.buttons);
 
-    let mut round = Round::Zero;
+    let mut state = State::Stop;
+    
+    let mut round = Number::Zero;
+    let mut sec = Number::Zero;
+    let mut is_timer_running = false;
 
-    let mut is_timer_started = false;
+    let mut whistle = WHISTLE;
+    let ticks_per_second: u32 = 1_000_000;
 
     loop 
     {
-        if is_timer_started
+
+        match state
         {
-            display.show(&mut timer, round.convert_to_lights(), 750);
-            round.next();
-            timer.delay_ms(250u8);
+            State::Stop => 
+            {
+                rprintln!("Timer stopped");
+                display.show(&mut timer_1, round.convert_to_lights(), 10);
+            },
+            State::WarmingUp =>
+            {
+                rprintln!("Warming up");
+                display.show(&mut timer_1, sec.convert_to_lights(), 10);
+                run_countdown(&mut is_timer_running, &mut timer, ticks_per_second, &mut sec, &mut whistle);
+                if !is_timer_running
+                {
+                    state = State::Round;
+                }
+            },
+            State::Round =>
+            {
+                rprintln!("Round {} start", round as u32);
+                display.show(&mut timer_1, round.convert_to_lights(), 10);
+                state = State::RoundWhistle;
+            },
+            State::RoundWhistle =>
+            {
+                rprintln!("Round {} end", round as u32);
+                display.show(&mut timer_1, sec.convert_to_lights(), 10);
+                run_countdown(&mut is_timer_running, &mut timer, ticks_per_second, &mut sec, &mut whistle);
+
+                if !is_timer_running
+                {
+                    round.previous();
+                }
+
+                if round as u32 == 0
+                {
+                    reset(&mut round, &mut sec, &mut state, &mut is_timer_running, &mut whistle);
+                    state = State::Stop;
+                }
+                else
+                {
+                    if !is_timer_running
+                    {
+                        state = State::Rest;
+                    }
+                }
+            },
+            State::Rest =>
+            {
+                rprintln!("Rest before round {} start", round as u32);
+                display.show(&mut timer_1, round.convert_to_lights(), 10);
+                state = State::RestWhistle;
+            },
+            State::RestWhistle =>
+            {
+                rprintln!("Rest before round {} end", round as u32);
+                display.show(&mut timer_1, sec.convert_to_lights(), 10);
+                run_countdown(&mut is_timer_running, &mut timer, ticks_per_second, &mut sec, &mut whistle);
+                if !is_timer_running
+                {
+                    state = State::Round;
+                }
+            },
         }
-        else
-        {
-            display.show(&mut timer, round.convert_to_lights(), 10);
-        }
 
-        // display.clear();
-        // round.next();
-        // timer.delay_ms(300u16);
-
-        // rprintln!("next round");
-
-        // if let Ok(is_button_b_low) = button_b.is_low()
-        // {
-        //     if is_button_b_low
-        //     {
-        //         if let Ok(is_button_b_high) = button_b.is_high()
-        //         {
-        //             if is_button_b_high
-        //             {
-        //                 rprintln!("Button B clicked");
-        //             }
-        //         }
-        //     }
-        // }
-
-
-        // if let Ok(is_button_a_clicked) = button_a.is_low()
-        // {
-        //     if is_button_a_clicked
-        //     {
-        //         rprintln!("Button A clicked");
-        //     }
-        // }
 
         match get_pressed(true)
         {
             Pressed::ButtonA => 
             {
-                rprintln!("Button A clicked");
-                is_timer_started = !is_timer_started;
+                rprintln!("Button A clicked!");
+                if state != State::Stop
+                {
+                    reset(&mut round, &mut sec, &mut state, &mut is_timer_running, &mut whistle);
+                }
+                else
+                {
+                    state = State::WarmingUp;
+                }
             },
             Pressed::ButtonB => 
             {
-                rprintln!("Button B clicked");
-                if !is_timer_started
+                rprintln!("Button B clicked!");
+                if state == State::Stop
                 {
                     display.clear();
                     round.next();

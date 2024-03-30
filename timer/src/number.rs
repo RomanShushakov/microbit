@@ -1,25 +1,26 @@
-pub enum Round
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum Number
 {
-    Zero,
-    One,
-    Two,
-    Three,
-    Four,
-    Five,
-    Six,
-    Seven,
-    Eight,
-    Nine,
+    Zero = 0,
+    One = 1,
+    Two = 2,
+    Three = 3,
+    Four = 4,
+    Five = 5,
+    Six = 6,
+    Seven = 7,
+    Eight = 8,
+    Nine = 9,
 }
 
 
-impl Round
+impl Number
 {
     pub fn convert_to_lights(&self) -> [[u8; 5]; 5]
     {
         match self
         {
-            Round::Zero => 
+            Number::Zero => 
             {
                 [
                     [0, 1, 1, 1, 0],
@@ -29,7 +30,7 @@ impl Round
                     [0, 1, 1, 1, 0],
                 ]
             },
-            Round::One =>
+            Number::One =>
             {
                 [
                     [0, 0, 1, 0, 0],
@@ -39,7 +40,7 @@ impl Round
                     [0, 0, 1, 0, 0],
                 ]
             },
-            Round::Two =>
+            Number::Two =>
             {
                 [
                     [0, 1, 1, 1, 0],
@@ -49,7 +50,7 @@ impl Round
                     [0, 1, 1, 1, 0],
                 ]
             },
-            Round::Three =>
+            Number::Three =>
             {
                 [
                     [0, 1, 1, 1, 0],
@@ -59,7 +60,7 @@ impl Round
                     [0, 1, 0, 0, 0],
                 ]
             },
-            Round::Four =>
+            Number::Four =>
             {
                 [
                     [0, 1, 0, 1, 0],
@@ -69,7 +70,7 @@ impl Round
                     [0, 0, 0, 1, 0],
                 ]
             },
-            Round::Five =>
+            Number::Five =>
             {
                 [
                     [0, 1, 1, 1, 0],
@@ -79,7 +80,7 @@ impl Round
                     [0, 1, 1, 1, 0],
                 ]
             },
-            Round::Six =>
+            Number::Six =>
             {
                 [
                     [0, 0, 0, 1, 0],
@@ -89,7 +90,7 @@ impl Round
                     [0, 1, 1, 1, 0],
                 ]
             },
-            Round::Seven =>
+            Number::Seven =>
             {
                 [
                     [0, 1, 1, 1, 0],
@@ -99,7 +100,7 @@ impl Round
                     [0, 1, 0, 0, 0],
                 ]
             },
-            Round::Eight =>
+            Number::Eight =>
             {
                 [
                     [0, 1, 1, 1, 0],
@@ -109,7 +110,7 @@ impl Round
                     [0, 1, 1, 1, 0],
                 ]
             },
-            Round::Nine =>
+            Number::Nine =>
             {
                 [
                     [0, 1, 1, 1, 0],
@@ -127,16 +128,40 @@ impl Round
     {
         match self
         {
-            Round::Zero => *self = Round::One,
-            Round::One => *self = Round::Two,
-            Round::Two => *self = Round::Three,
-            Round::Three => *self = Round::Four,
-            Round::Four => *self = Round::Five,
-            Round::Five => *self = Round::Six,
-            Round::Six => *self = Round::Seven,
-            Round::Seven => *self = Round::Eight,
-            Round::Eight => *self = Round::Nine,
-            Round::Nine => *self = Round::Zero,
+            Number::Zero => *self = Number::One,
+            Number::One => *self = Number::Two,
+            Number::Two => *self = Number::Three,
+            Number::Three => *self = Number::Four,
+            Number::Four => *self = Number::Five,
+            Number::Five => *self = Number::Six,
+            Number::Six => *self = Number::Seven,
+            Number::Seven => *self = Number::Eight,
+            Number::Eight => *self = Number::Nine,
+            Number::Nine => *self = Number::Zero,
         }
+    }
+
+
+    pub fn previous(&mut self)
+    {
+        match self
+        {
+            Number::Zero => *self = Number::Nine,
+            Number::One => *self = Number::Zero,
+            Number::Two => *self = Number::One,
+            Number::Three => *self = Number::Two,
+            Number::Four => *self = Number::Three,
+            Number::Five => *self = Number::Four,
+            Number::Six => *self = Number::Five,
+            Number::Seven => *self = Number::Six,
+            Number::Eight => *self = Number::Seven,
+            Number::Nine => *self = Number::Eight,
+        }
+    }
+
+
+    pub fn init(&mut self)
+    {
+        *self = Number::Zero;
     }
 }
