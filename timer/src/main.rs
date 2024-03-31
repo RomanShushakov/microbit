@@ -163,7 +163,20 @@ fn main() -> !
             {
                 rprintln!("Round {} start", round as u32);
                 display.show(&mut timer_1, round.convert_to_lights(), 10);
-                state = State::RoundWhistle;
+
+                if !is_timer_running
+                {
+                    timer.start(ROUND_DURATION - WHISTLE);
+                    is_timer_running = true;
+                }
+                else
+                {
+                    if let Ok(_) = timer.wait()
+                    {
+                        is_timer_running = false;
+                        state = State::RoundWhistle;
+                    }
+                }
             },
             State::RoundWhistle =>
             {
@@ -193,7 +206,20 @@ fn main() -> !
             {
                 rprintln!("Rest before round {} start", round as u32);
                 display.show(&mut timer_1, round.convert_to_lights(), 10);
-                state = State::RestWhistle;
+
+                if !is_timer_running
+                {
+                    timer.start(REST_DURATION - WHISTLE);
+                    is_timer_running = true;
+                }
+                else
+                {
+                    if let Ok(_) = timer.wait()
+                    {
+                        is_timer_running = false;
+                        state = State::RestWhistle;
+                    }
+                }
             },
             State::RestWhistle =>
             {
