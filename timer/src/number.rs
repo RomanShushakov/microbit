@@ -158,10 +158,4 @@ impl Number
             Number::Nine => *self = Number::Eight,
         }
     }
-
-
-    pub fn init(&mut self)
-    {
-        *self = Number::Zero;
-    }
 }

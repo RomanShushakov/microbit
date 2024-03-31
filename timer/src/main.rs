@@ -2,7 +2,6 @@
 #![no_main]
 #![no_std]
 
-use cortex_m::interrupt::free;
 use cortex_m_rt::entry;
 use rtt_target::{rtt_init_print, rprintln};
 use panic_rtt_target as _;
@@ -67,23 +66,20 @@ fn run_countdown<T, V>(
     {
         if let Ok(_) = timer.wait()
         {
-            free(|cs| 
+            if *whistle == WHISTLE
             {
-                if *whistle == WHISTLE
-                {
-                    speaker.set_prescaler(pwm::Prescaler::Div128);
-                    speaker.set_duty_on_common(32000);
-                } 
-                else if *whistle <= 3_000_000 && *whistle > 1_000_000
-                {
-                    speaker.set_prescaler(pwm::Prescaler::Div1);
-                    speaker.set_duty_on_common(32000);
-                }
-                else
-                {
-                    speaker.stop();
-                }
-            });
+                speaker.set_prescaler(pwm::Prescaler::Div128);
+                speaker.set_duty_on_common(32000);
+            } 
+            else if *whistle <= 3_000_000 && *whistle > 1_000_000
+            {
+                speaker.set_prescaler(pwm::Prescaler::Div1);
+                speaker.set_duty_on_common(32000);
+            }
+            else
+            {
+                speaker.stop();
+            }
 
             sec.previous();
             *whistle -= ticks_per_second;
