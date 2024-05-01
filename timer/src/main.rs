@@ -8,7 +8,7 @@ use panic_rtt_target as _;
 use microbit::
 {
     board::Board, display::blocking::Display, 
-    hal::{gpio, prelude::*, pwm::{self, Pwm}, time::Hertz, timer::{self, Periodic}, Timer},
+    hal::{gpio, pwm::{self, Pwm}, time::Hertz, timer::{self, Periodic}, Timer},
 };
 
 mod number;
@@ -64,7 +64,7 @@ fn run_countdown<T, V>(
     }
     else
     {
-        if let Ok(_) = timer.wait()
+        if timer.reset_if_finished()
         {
             if *whistle == WHISTLE
             {
@@ -167,7 +167,7 @@ fn main() -> !
                 }
                 else
                 {
-                    if let Ok(_) = timer.wait()
+                    if timer.reset_if_finished()
                     {
                         is_timer_running = false;
                         state = State::RoundWhistle;
@@ -210,7 +210,7 @@ fn main() -> !
                 }
                 else
                 {
-                    if let Ok(_) = timer.wait()
+                    if timer.reset_if_finished()
                     {
                         is_timer_running = false;
                         state = State::RestWhistle;
